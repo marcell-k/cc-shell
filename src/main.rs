@@ -1,7 +1,27 @@
+use std::collections::HashMap;
 #[allow(unused_imports)]
 use std::io::{self, Write};
 
+type Handler = fn(&[&str]);
+
+fn exit_cmd(_args: &[&str]) {
+    std::process::exit(0)
+}
+
+fn echo_cmd(args: &[&str]) {
+    println!("{}", args.join(" "))
+}
+
+fn build_builtins() -> HashMap<&'static str, Handler> {
+    let mut m: HashMap<&'static str, Handler> = HashMap::new();
+    m.insert("exit", exit_cmd);
+    m.insert("echo", echo_cmd);
+
+    m
+}
+
 fn main() {
+    let builtins = build_builtins();
     loop {
         print!("$ ");
         io::stdout().flush().unwrap();
@@ -16,14 +36,11 @@ fn main() {
         }
         let mut parts = input.split_whitespace();
         let command = parts.next().unwrap();
+        let args: Vec<&str> = parts.collect();
 
-        if command == "exit" {
-            break;
-        } else if command == "echo" {
-            let rest: Vec<&str> = parts.collect();
-            println!("{}", rest.join(" "));
-            continue;
+        match builtins.get(command) {
+            Some(handler) => handler(&args),
+            None => println!("{}: command not found", command),
         }
-        println!("{}: command not found", command);
     }
 }
