@@ -12,6 +12,19 @@ fn echo_cmd(args: &[&str]) {
     println!("{}", args.join(" "))
 }
 
+fn type_cmd(args: &[&str], builtins: &HashMap<&'static str, Handler>) {
+    if args.is_empty() {
+        return;
+    }
+
+    let command = args[0];
+    if builtins.contains_key(command) {
+        println!("{} is a shell builtin", command)
+    } else {
+        println!("{}: not found", command)
+    }
+}
+
 fn build_builtins() -> HashMap<&'static str, Handler> {
     let mut m: HashMap<&'static str, Handler> = HashMap::new();
     m.insert("exit", exit_cmd);
@@ -38,9 +51,13 @@ fn main() {
         let command = parts.next().unwrap();
         let args: Vec<&str> = parts.collect();
 
-        match builtins.get(command) {
-            Some(handler) => handler(&args),
-            None => println!("{}: command not found", command),
+        if command == "type" {
+            type_cmd(&args, &builtins);
+        } else {
+            match builtins.get(command) {
+                Some(handler) => handler(&args),
+                None => println!("{}: command not found", command),
+            }
         }
     }
 }
