@@ -1,38 +1,5 @@
-use std::collections::HashMap;
-#[allow(unused_imports)]
+use codecrafters_shell::{build_builtins, type_cmd};
 use std::io::{self, Write};
-
-type Handler = fn(&[&str]);
-
-fn exit_cmd(_args: &[&str]) {
-    std::process::exit(0)
-}
-
-fn echo_cmd(args: &[&str]) {
-    println!("{}", args.join(" "))
-}
-
-fn type_cmd(args: &[&str], builtins: &HashMap<&'static str, Handler>) {
-    if args.is_empty() {
-        return;
-    }
-
-    let command = args[0];
-    if builtins.contains_key(command) {
-        println!("{} is a shell builtin", command)
-    } else {
-        println!("{}: not found", command)
-    }
-}
-
-fn build_builtins() -> HashMap<&'static str, Handler> {
-    let mut m: HashMap<&'static str, Handler> = HashMap::new();
-    m.insert("exit", exit_cmd);
-    m.insert("echo", echo_cmd);
-    m.insert("type", |_args: &[&str]| {});
-
-    m
-}
 
 fn main() {
     let builtins = build_builtins();
