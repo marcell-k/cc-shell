@@ -17,8 +17,8 @@ pub fn type_cmd(args: &[&str], builtins: &HashMap<&'static str, Handler>) {
     if args.is_empty() {
         return;
     }
-
     let command = args[0];
+
     if builtins.contains_key(command) {
         println!("{} is a shell builtin", command);
         return;
@@ -35,18 +35,18 @@ pub fn build_builtins() -> HashMap<&'static str, Handler> {
     m.insert("exit", exit_cmd);
     m.insert("echo", echo_cmd);
     m.insert("type", |_args: &[&str]| {});
-
     m
 }
 
-fn search_path(command: &str) -> Option<PathBuf> {
+pub fn search_path(command: &str) -> Option<PathBuf> {
     let path_var = env::var_os("PATH").unwrap_or_default();
+
     for dir in env::split_paths(&path_var) {
-        let candiate = dir.join(command);
-        if let Ok(metadata) = fs::metadata(&candiate) {
+        let candidate = dir.join(command);
+        if let Ok(metadata) = fs::metadata(&candidate) {
             let mode = metadata.permissions().mode();
             if mode & 0o111 != 0 {
-                return Some(candiate);
+                return Some(candidate);
             }
         }
     }
