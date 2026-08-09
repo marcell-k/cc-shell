@@ -16,6 +16,10 @@ fn main() {
         }
         let mut parts = input.split_whitespace();
         let command = parts.next().unwrap();
+
+        if command == "exit" {
+            break;
+        }
         println!("{}: command not found", command);
     }
 }
