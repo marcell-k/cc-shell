@@ -29,6 +29,7 @@ fn build_builtins() -> HashMap<&'static str, Handler> {
     let mut m: HashMap<&'static str, Handler> = HashMap::new();
     m.insert("exit", exit_cmd);
     m.insert("echo", echo_cmd);
+    m.insert("type", |_args: &[&str]| {});
 
     m
 }
