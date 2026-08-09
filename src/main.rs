@@ -1,6 +1,7 @@
 use codecrafters_shell::{Handler, build_builtins, search_path, type_cmd};
 use std::collections::HashMap;
 use std::io::{self, Write};
+use std::os::unix::process::CommandExt;
 use std::process::Command;
 
 fn dispatch(command: &str, args: &[&str], builtins: &HashMap<&'static str, Handler>) {
@@ -16,7 +17,7 @@ fn dispatch(command: &str, args: &[&str], builtins: &HashMap<&'static str, Handl
 
     match search_path(command) {
         Some(path) => {
-            let status = Command::new(&path).args(args).status();
+            let status = Command::new(&path).arg0(command).args(args).status();
             if let Err(e) = status {
                 eprintln!("{}: {}", command, e);
             }
