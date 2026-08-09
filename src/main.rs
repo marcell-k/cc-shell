@@ -19,6 +19,10 @@ fn main() {
 
         if command == "exit" {
             break;
+        } else if command == "echo" {
+            let rest: Vec<&str> = parts.collect();
+            println!("{}", rest.join(" "));
+            continue;
         }
         println!("{}: command not found", command);
     }
