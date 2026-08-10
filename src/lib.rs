@@ -13,6 +13,10 @@ pub fn echo_cmd(args: &[&str]) {
     println!("{}", args.join(" "))
 }
 
+pub fn pwd_cmd(_args: &[&str]) {
+    println!("{}", env::current_dir().unwrap().display())
+}
+
 pub fn type_cmd(args: &[&str], builtins: &HashMap<&'static str, Handler>) {
     if args.is_empty() {
         return;
@@ -34,6 +38,7 @@ pub fn build_builtins() -> HashMap<&'static str, Handler> {
     let mut m: HashMap<&'static str, Handler> = HashMap::new();
     m.insert("exit", exit_cmd);
     m.insert("echo", echo_cmd);
+    m.insert("pwd", pwd_cmd);
     m.insert("type", |_args: &[&str]| {});
     m
 }
