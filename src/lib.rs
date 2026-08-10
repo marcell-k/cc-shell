@@ -17,6 +17,16 @@ pub fn pwd_cmd(_args: &[&str]) {
     println!("{}", env::current_dir().unwrap().display())
 }
 
+pub fn cd_cmd(args: &[&str]) {
+    if args.is_empty() {
+        return;
+    }
+    let target = args[0];
+    if env::set_current_dir(target).is_err() {
+        println!("cd: {} No such file or directory", target)
+    }
+}
+
 pub fn type_cmd(args: &[&str], builtins: &HashMap<&'static str, Handler>) {
     if args.is_empty() {
         return;
@@ -39,6 +49,7 @@ pub fn build_builtins() -> HashMap<&'static str, Handler> {
     m.insert("exit", exit_cmd);
     m.insert("echo", echo_cmd);
     m.insert("pwd", pwd_cmd);
+    m.insert("cd", cd_cmd);
     m.insert("type", |_args: &[&str]| {});
     m
 }
