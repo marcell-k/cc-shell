@@ -22,7 +22,22 @@ pub fn cd_cmd(args: &[&str]) {
         return;
     }
     let target = args[0];
-    if env::set_current_dir(target).is_err() {
+
+    let path: PathBuf = if target == "~" {
+        match env::var_os("HOME") {
+            Some(home) => PathBuf::from(home),
+            None => return,
+        }
+    } else if let Some(rest) = target.strip_prefix("~") {
+        match env::var_os("HOME") {
+            Some(home) => PathBuf::from(home).join(rest),
+            None => return,
+        }
+    } else {
+        PathBuf::from(target)
+    };
+
+    if env::set_current_dir(&path).is_err() {
         println!("cd: {} No such file or directory", target)
     }
 }
