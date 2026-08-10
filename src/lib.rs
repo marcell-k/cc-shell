@@ -38,7 +38,7 @@ pub fn cd_cmd(args: &[&str]) {
     };
 
     if env::set_current_dir(&path).is_err() {
-        println!("cd: {} No such file or directory", target)
+        println!("cd: {}: No such file or directory", target)
     }
 }
 
