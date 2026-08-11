@@ -83,25 +83,47 @@ pub fn search_path(command: &str) -> Option<PathBuf> {
     }
     None
 }
-
+#[derive(PartialEq)]
+enum QuoteState {
+    None,
+    Single,
+    Double,
+}
 pub fn tokenize(input: &str) -> Vec<String> {
     let mut out: Vec<String> = Vec::new();
     let mut buf = String::new();
-    let mut in_quotes = false;
+    let mut quote = QuoteState::None;
     let mut in_token = false;
 
     for c in input.chars() {
-        if c == '\'' {
-            in_quotes = !in_quotes;
-            in_token = true;
-        } else if (c == ' ' || c == '\t') && !in_quotes {
-            if in_token {
-                out.push(mem::take(&mut buf));
-                in_token = false
+        match c {
+            '\'' if quote != QuoteState::Double => {
+                quote = if quote == QuoteState::Single {
+                    QuoteState::None
+                } else {
+                    QuoteState::Single
+                };
+                in_token = true;
             }
-        } else {
-            buf.push(c);
-            in_token = true;
+
+            '\"' if quote != QuoteState::Single => {
+                quote = if quote == QuoteState::Double {
+                    QuoteState::None
+                } else {
+                    QuoteState::Double
+                };
+                in_token = true;
+            }
+            ' ' | '\t' if quote == QuoteState::None => {
+                if in_token {
+                    out.push(mem::take(&mut buf));
+                    in_token = false;
+                }
+            }
+            _ => {
+                buf.push(c);
+                in_token = true;
+            }
         }
     }
     if in_token {
