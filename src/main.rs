@@ -20,7 +20,13 @@ fn dispatch(command: ParsedCommand, builtins: &HashMap<&'static str, Handler>) {
     };
 
     if let Some(handler) = builtins.get(command.program.as_str()) {
-        handler(&command);
+        match stdout_file {
+            Some(mut f) => handler(&command, &mut f),
+            None => {
+                let mut stdout = io::stdout();
+                handler(&command, &mut stdout);
+            }
+        }
         return;
     }
 
@@ -28,13 +34,10 @@ fn dispatch(command: ParsedCommand, builtins: &HashMap<&'static str, Handler>) {
         Some(path) => {
             let mut cmd = Command::new(&path);
             cmd.arg0(&command.program).args(&command.args);
-
             if let Some(file) = stdout_file {
                 cmd.stdout(Stdio::from(file));
             }
-
-            let status = cmd.status();
-            if let Err(e) = status {
+            if let Err(e) = cmd.status() {
                 eprintln!("{}: {}", command.program, e);
             }
         }
@@ -44,11 +47,9 @@ fn dispatch(command: ParsedCommand, builtins: &HashMap<&'static str, Handler>) {
 
 fn main() {
     let builtins = build_builtins();
-
     loop {
         print!("$ ");
         io::stdout().flush().unwrap();
-
         let mut input = String::new();
         if io::stdin().read_line(&mut input).unwrap() == 0 {
             break;
@@ -61,7 +62,6 @@ fn main() {
         if tokens.is_empty() {
             continue;
         }
-
         let command = parse_command(tokens);
         dispatch(command, &builtins);
     }

@@ -3,7 +3,7 @@ use std::mem;
 #[derive(Debug, PartialEq)]
 pub enum Token {
     Word(String),
-    Redirect(u8), // >
+    Redirect(u8), // > 0-stdin, 1-stdout, 2-stderr
     Pipe,
 }
 
