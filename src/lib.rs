@@ -95,8 +95,16 @@ pub fn tokenize(input: &str) -> Vec<String> {
     let mut quote = QuoteState::None;
     let mut in_token = false;
 
-    for c in input.chars() {
+    let mut chars = input.chars().peekable();
+    while let Some(c) = chars.next() {
         match c {
+            '\\' if quote == QuoteState::None => {
+                if let Some(next) = chars.next() {
+                    buf.push(next);
+                }
+                in_token = true;
+            }
+
             '\'' if quote != QuoteState::Double => {
                 quote = if quote == QuoteState::Single {
                     QuoteState::None
