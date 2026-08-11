@@ -115,7 +115,7 @@ mod tests {
     use super::tokenize;
 
     #[test]
-    fn test_tokenize() {
+    fn test_single_quote_tokenize() {
         assert_eq!(tokenize("hello"), vec!["hello"]);
         assert_eq!(tokenize("hello world"), vec!["hello", "world"]);
         assert_eq!(tokenize("hello    world"), vec!["hello", "world"]);
@@ -127,5 +127,36 @@ mod tests {
             tokenize("cat '/tmp/file name' '/tmp/file name with spaces'"),
             vec!["cat", "/tmp/file name", "/tmp/file name with spaces"]
         );
+    }
+    #[test]
+    fn test_double_quote_tokenize() {
+        assert_eq!(
+            tokenize("echo \"hello    world\""),
+            vec!["echo", "hello    world"]
+        ); // spaces preserved inside double quotes
+
+        assert_eq!(
+            tokenize("echo \"hello\"\"world\""),
+            vec!["echo", "helloworld"]
+        ); // adjacent double-quoted strings concatenate
+
+        assert_eq!(tokenize("echo \"hello\"world"), vec!["echo", "helloworld"]); // quoted + unquoted concatenate
+
+        assert_eq!(
+            tokenize("echo \"hello\" \"world\""),
+            vec!["echo", "hello", "world"]
+        ); // space outside quotes = separate args
+
+        assert_eq!(
+            tokenize("echo \"shell's test\""),
+            vec!["echo", "shell's test"]
+        ); // single quote literal inside double quotes
+
+        assert_eq!(
+            tokenize("echo 'hello'\"world\""),
+            vec!["echo", "helloworld"]
+        ); // single + double quote concat, mixed
+
+        assert_eq!(tokenize("echo \"\""), vec!["echo", ""]); // empty double-quoted arg
     }
 }
