@@ -104,6 +104,17 @@ pub fn tokenize(input: &str) -> Vec<String> {
                 }
                 in_token = true;
             }
+            '\\' if quote == QuoteState::Double => {
+                match chars.peek() {
+                    Some('"') | Some('\\') | Some('$') | Some('`') | Some('\n') => {
+                        buf.push(chars.next().unwrap());
+                    }
+                    _ => {
+                        buf.push('\\');
+                    }
+                }
+                in_token = true;
+            }
 
             '\'' if quote != QuoteState::Double => {
                 quote = if quote == QuoteState::Single {
