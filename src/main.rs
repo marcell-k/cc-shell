@@ -1,4 +1,4 @@
-use codecrafters_shell::{Handler, build_builtins, search_path, type_cmd};
+use codecrafters_shell::{Handler, build_builtins, search_path, tokenize, type_cmd};
 use std::collections::HashMap;
 use std::io::{self, Write};
 use std::os::unix::process::CommandExt;
@@ -41,11 +41,13 @@ fn main() {
         if input.is_empty() {
             continue;
         }
+        let tokens = tokenize(input);
+        if tokens.is_empty() {
+            continue;
+        }
 
-        let mut parts = input.split_whitespace();
-        let command = parts.next().unwrap();
-        let args: Vec<&str> = parts.collect();
-
-        dispatch(command, &args, &builtins);
+        let refs: Vec<&str> = tokens.iter().map(String::as_str).collect();
+        let (command, args) = refs.split_first().unwrap();
+        dispatch(command, args, &builtins);
     }
 }

@@ -1,7 +1,7 @@
-use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::{collections::HashMap, env};
+use std::{fs, mem};
 
 pub type Handler = fn(&[&str]);
 
@@ -82,4 +82,50 @@ pub fn search_path(command: &str) -> Option<PathBuf> {
         }
     }
     None
+}
+
+pub fn tokenize(input: &str) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    let mut buf = String::new();
+    let mut in_quotes = false;
+    let mut in_token = false;
+
+    for c in input.chars() {
+        if c == '\'' {
+            in_quotes = !in_quotes;
+            in_token = true;
+        } else if (c == ' ' || c == '\t') && !in_quotes {
+            if in_token {
+                out.push(mem::take(&mut buf));
+                in_token = false
+            }
+        } else {
+            buf.push(c);
+            in_token = true;
+        }
+    }
+    if in_token {
+        out.push(buf);
+    }
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::tokenize;
+
+    #[test]
+    fn test_tokenize() {
+        assert_eq!(tokenize("hello"), vec!["hello"]);
+        assert_eq!(tokenize("hello world"), vec!["hello", "world"]);
+        assert_eq!(tokenize("hello    world"), vec!["hello", "world"]);
+        assert_eq!(tokenize("'hello    world'"), vec!["hello    world"]);
+        assert_eq!(tokenize("''"), vec![""]);
+        assert_eq!(tokenize("hello''world"), vec!["helloworld"]);
+        assert_eq!(tokenize("'hello''world'"), vec!["helloworld"]);
+        assert_eq!(
+            tokenize("cat '/tmp/file name' '/tmp/file name with spaces'"),
+            vec!["cat", "/tmp/file name", "/tmp/file name with spaces"]
+        );
+    }
 }
