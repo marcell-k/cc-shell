@@ -1,28 +1,28 @@
-use codecrafters_shell::{Handler, build_builtins, search_path, tokenize, type_cmd};
+use codecrafters_shell::{
+    Handler, ParsedCommand, build_builtins, parse_command, search_path, tokenize,
+};
 use std::collections::HashMap;
 use std::io::{self, Write};
 use std::os::unix::process::CommandExt;
 use std::process::Command;
 
-fn dispatch(command: &str, args: &[&str], builtins: &HashMap<&'static str, Handler>) {
-    if command == "type" {
-        type_cmd(args, builtins);
+fn dispatch(command: ParsedCommand, builtins: &HashMap<&'static str, Handler>) {
+    if let Some(handler) = builtins.get(command.program.as_str()) {
+        handler(&command);
         return;
     }
 
-    if let Some(handler) = builtins.get(command) {
-        handler(args);
-        return;
-    }
-
-    match search_path(command) {
+    match search_path(&command.program) {
         Some(path) => {
-            let status = Command::new(&path).arg0(command).args(args).status();
+            let status = Command::new(&path)
+                .arg0(&command.program)
+                .args(&command.args)
+                .status();
             if let Err(e) = status {
-                eprintln!("{}: {}", command, e);
+                eprintln!("{}: {}", command.program, e);
             }
         }
-        None => println!("{}: command not found", command),
+        None => println!("{}: command not found", command.program),
     }
 }
 
@@ -46,8 +46,7 @@ fn main() {
             continue;
         }
 
-        let refs: Vec<&str> = tokens.iter().map(String::as_str).collect();
-        let (command, args) = refs.split_first().unwrap();
-        dispatch(command, args, &builtins);
+        let command = parse_command(tokens);
+        dispatch(command, &builtins);
     }
 }

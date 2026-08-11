@@ -4,25 +4,62 @@ use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
-pub type Handler = fn(&[&str]);
+use crate::Token;
 
-pub fn exit_cmd(_args: &[&str]) {
+pub type Handler = fn(&ParsedCommand);
+
+pub struct ParsedCommand {
+    pub program: String,
+    pub args: Vec<String>,
+    pub stdout_redirect: Option<(u8, PathBuf)>,
+}
+
+pub fn parse_command(tokens: Vec<Token>) -> ParsedCommand {
+    let mut iter = tokens.into_iter();
+
+    let program = match iter.next() {
+        Some(Token::Word(p)) => p,
+        _ => String::new(),
+    };
+
+    let mut args: Vec<String> = Vec::new();
+    let mut stdout_redirect: Option<(u8, PathBuf)> = None;
+
+    while let Some(item) = iter.next() {
+        match item {
+            Token::Word(w) => args.push(w),
+            Token::Redirect => {
+                if let Some(Token::Word(w)) = iter.next() {
+                    stdout_redirect = Some((1, w.into()))
+                }
+            }
+            Token::Pipe => {}
+        }
+    }
+    ParsedCommand {
+        program,
+        args,
+        stdout_redirect,
+    }
+}
+
+pub fn exit_cmd(_command: &ParsedCommand) {
     std::process::exit(0)
 }
 
-pub fn echo_cmd(args: &[&str]) {
-    println!("{}", args.join(" "))
+pub fn echo_cmd(command: &ParsedCommand) {
+    println!("{}", command.args.join(" "))
 }
 
-pub fn pwd_cmd(_args: &[&str]) {
+pub fn pwd_cmd(_command: &ParsedCommand) {
     println!("{}", env::current_dir().unwrap().display())
 }
 
-pub fn cd_cmd(args: &[&str]) {
-    if args.is_empty() {
-        return;
-    }
-    let target = args[0];
+pub fn cd_cmd(command: &ParsedCommand) {
+    let target = match command.args.first() {
+        Some(t) => t.as_str(),
+        None => return,
+    };
 
     let path: PathBuf = if target == "~" {
         match env::var_os("HOME") {
@@ -43,20 +80,21 @@ pub fn cd_cmd(args: &[&str]) {
     }
 }
 
-pub fn type_cmd(args: &[&str], builtins: &HashMap<&'static str, Handler>) {
-    if args.is_empty() {
+pub fn type_cmd(command: &ParsedCommand) {
+    let target = match command.args.first() {
+        Some(t) => t.as_str(),
+        None => return,
+    };
+
+    let builtins = build_builtins();
+    if builtins.contains_key(target) {
+        println!("{} is a shell builtin", target);
         return;
     }
-    let command = args[0];
 
-    if builtins.contains_key(command) {
-        println!("{} is a shell builtin", command);
-        return;
-    }
-
-    match search_path(command) {
-        Some(path) => println!("{} is {}", command, path.display()),
-        None => println!("{}: not found", command),
+    match search_path(target) {
+        Some(path) => println!("{} is {}", target, path.display()),
+        None => println!("{}: not found", target),
     }
 }
 
@@ -66,7 +104,7 @@ pub fn build_builtins() -> HashMap<&'static str, Handler> {
     m.insert("echo", echo_cmd);
     m.insert("pwd", pwd_cmd);
     m.insert("cd", cd_cmd);
-    m.insert("type", |_args: &[&str]| {});
+    m.insert("type", type_cmd);
     m
 }
 
