@@ -28,9 +28,9 @@ pub fn parse_command(tokens: Vec<Token>) -> ParsedCommand {
     while let Some(item) = iter.next() {
         match item {
             Token::Word(w) => args.push(w),
-            Token::Redirect => {
+            Token::Redirect(x) => {
                 if let Some(Token::Word(w)) = iter.next() {
-                    stdout_redirect = Some((1, w.into()))
+                    stdout_redirect = Some((x, w.into()))
                 }
             }
             Token::Pipe => {}

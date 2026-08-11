@@ -3,7 +3,7 @@ use std::mem;
 #[derive(Debug, PartialEq)]
 pub enum Token {
     Word(String),
-    Redirect, // >
+    Redirect(u8), // >
     Pipe,
 }
 
@@ -23,11 +23,23 @@ pub fn tokenize(input: &str) -> Vec<Token> {
     while let Some(c) = chars.next() {
         match c {
             '>' if quote == QuoteState::None => {
-                if in_token {
-                    out.push(Token::Word(mem::take(&mut buf)));
+                let fd = if in_token && (buf == "1" || buf == "2") {
+                    buf.parse::<u8>().ok()
+                } else {
+                    None
+                };
+
+                if let Some(fd) = fd {
+                    buf.clear();
+                    in_token = false;
+                    out.push(Token::Redirect(fd));
+                } else {
+                    if in_token {
+                        out.push(Token::Word(mem::take(&mut buf)));
+                    }
+                    in_token = false;
+                    out.push(Token::Redirect(1)); // default fd 1
                 }
-                in_token = false;
-                out.push(Token::Redirect);
             }
             '\\' if quote == QuoteState::None => {
                 if let Some(next) = chars.next() {
