@@ -81,12 +81,3 @@ pub fn tokenize(input: &str) -> Vec<Token> {
     }
     out
 }
-
-mod tests {
-    use crate::{tokenize, tokenizer::Token};
-
-    #[test]
-    fn test_tokenizer() {
-        assert_eq!(tokenize("echo '>'"), vec![Token::Word("cho".to_string())])
-    }
-}

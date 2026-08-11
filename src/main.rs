@@ -2,11 +2,23 @@ use codecrafters_shell::{
     Handler, ParsedCommand, build_builtins, parse_command, search_path, tokenize,
 };
 use std::collections::HashMap;
+use std::fs::File;
 use std::io::{self, Write};
 use std::os::unix::process::CommandExt;
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 fn dispatch(command: ParsedCommand, builtins: &HashMap<&'static str, Handler>) {
+    let stdout_file = match command.stdout_redirect.as_ref() {
+        Some((_fd, path)) => match File::create(path) {
+            Ok(f) => Some(f),
+            Err(e) => {
+                eprintln!("{}: {}", path.display(), e);
+                return;
+            }
+        },
+        None => None,
+    };
+
     if let Some(handler) = builtins.get(command.program.as_str()) {
         handler(&command);
         return;
@@ -14,10 +26,14 @@ fn dispatch(command: ParsedCommand, builtins: &HashMap<&'static str, Handler>) {
 
     match search_path(&command.program) {
         Some(path) => {
-            let status = Command::new(&path)
-                .arg0(&command.program)
-                .args(&command.args)
-                .status();
+            let mut cmd = Command::new(&path);
+            cmd.arg0(&command.program).args(&command.args);
+
+            if let Some(file) = stdout_file {
+                cmd.stdout(Stdio::from(file));
+            }
+
+            let status = cmd.status();
             if let Err(e) = status {
                 eprintln!("{}: {}", command.program, e);
             }
