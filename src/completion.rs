@@ -5,6 +5,10 @@ use rustyline::{
     hint::Hinter,
     validate::Validator,
 };
+use std::os::unix::fs::PermissionsExt;
+use std::{env, fs};
+
+use std::collections::HashSet;
 use std::result::Result;
 pub struct CommandCompleterHelper {
     pub programs: Vec<&'static str>,
@@ -23,15 +27,21 @@ impl Completer for CommandCompleterHelper {
             return Ok((0, Vec::new()));
         }
 
-        let matches = self
+        let builtin_matches = self
             .programs
             .iter()
             .filter(|p| p.starts_with(prefix))
             .map(|cmd| Pair {
                 display: cmd.to_string(),
                 replacement: format!("{} ", cmd),
-            })
-            .collect::<Vec<Pair>>();
+            });
+
+        let exec_matches = search_executables(prefix).into_iter().map(|name| Pair {
+            display: name.clone(),
+            replacement: format!("{} ", name),
+        });
+
+        let matches: Vec<Pair> = builtin_matches.chain(exec_matches).collect();
         Ok((0, matches))
     }
 }
@@ -42,3 +52,36 @@ impl Hinter for CommandCompleterHelper {
 impl Highlighter for CommandCompleterHelper {}
 impl Validator for CommandCompleterHelper {}
 impl Helper for CommandCompleterHelper {}
+
+pub fn search_executables(prefix: &str) -> Vec<String> {
+    let path_var = env::var_os("PATH").unwrap_or_default();
+    let mut found: HashSet<String> = HashSet::new();
+
+    for dir in env::split_paths(&path_var) {
+        let entries = match fs::read_dir(&dir) {
+            Ok(e) => e,
+            Err(_) => continue,
+        };
+
+        for entry in entries {
+            let entry = match entry {
+                Ok(e) => e,
+                Err(_) => continue,
+            };
+
+            let name = entry.file_name().to_string_lossy().into_owned();
+
+            if !name.starts_with(prefix) {
+                continue;
+            }
+
+            if let Ok(metadata) = entry.metadata()
+                && metadata.is_file()
+                && metadata.permissions().mode() & 0o111 != 0
+            {
+                found.insert(name);
+            }
+        }
+    }
+    found.into_iter().collect()
+}

@@ -131,10 +131,10 @@ pub fn build_builtins() -> HashMap<&'static str, Handler> {
     m
 }
 
-pub fn search_path(command: &str) -> Option<PathBuf> {
+pub fn search_path(program: &str) -> Option<PathBuf> {
     let path_var = env::var_os("PATH").unwrap_or_default();
     for dir in env::split_paths(&path_var) {
-        let candidate = dir.join(command);
+        let candidate = dir.join(program);
         if let Ok(metadata) = fs::metadata(&candidate) {
             let mode = metadata.permissions().mode();
             if mode & 0o111 != 0 {
