@@ -6,6 +6,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
 use crate::Job;
+use crate::JobStatus;
 use crate::jobs_table;
 use crate::{RedirectMode, Token, completions};
 
@@ -104,32 +105,40 @@ pub fn complete_cmd(command: &ParsedCommand, io: &mut Io) {
 }
 
 pub fn jobs_cmd(_command: &ParsedCommand, io: &mut Io) {
-    let jobs = jobs_table().lock().unwrap();
+    let mut jobs = jobs_table().lock().unwrap();
+
+    for job in jobs.iter_mut() {
+        if let Ok(Some(_exit_status)) = job.child.try_wait() {
+            job.status = JobStatus::Done;
+        }
+    }
 
     let mut ids: Vec<u32> = jobs.iter().map(|j| j.id).collect();
-    ids.sort_unstable_by(|a, b| b.cmp(a));
-
+    ids.sort_unstable_by(|a, b| b.cmp(a)); // descending: highest id first
     let current = ids.first().copied();
     let previous = ids.get(1).copied();
 
     let mut display: Vec<&Job> = jobs.iter().collect();
     display.sort_unstable_by_key(|j| j.id);
 
-    for job in jobs.iter() {
+    for job in display {
         let marker = if Some(job.id) == current {
-            "+"
+            '+'
         } else if Some(job.id) == previous {
-            "-"
+            '-'
         } else {
-            " "
+            ' '
         };
-        writeln!(
-            io.out,
-            "[{}]{}  {:<24}{}",
-            job.id, marker, "Running", job.command
-        )
-        .ok();
+
+        let (status, cmdline) = match job.status {
+            JobStatus::Done => ("Done", job.command.clone()),
+            JobStatus::Running => ("Running", format!("{} &", job.command)),
+        };
+
+        writeln!(io.out, "[{}]{}  {:<24}{}", job.id, marker, status, cmdline).ok();
     }
+
+    jobs.retain(|job| job.status != JobStatus::Done);
 }
 
 pub fn exit_cmd(_command: &ParsedCommand, _io: &mut Io) {

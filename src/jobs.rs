@@ -5,7 +5,15 @@ pub struct Job {
     pub id: u32,
     pub pid: u32,
     pub command: String,
+    pub status: JobStatus,
     pub child: Child,
+}
+
+#[derive(PartialEq, Eq, Clone, Copy)]
+pub enum JobStatus {
+    Running,
+    Done,
+    // Stopped,
 }
 pub static JOBS: OnceLock<Mutex<Vec<Job>>> = OnceLock::new();
 

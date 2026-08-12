@@ -1,5 +1,5 @@
 use codecrafters_shell::{
-    CommandCompleterHelper, Handler, Io, Job, ParsedCommand, Redirect, RedirectMode,
+    CommandCompleterHelper, Handler, Io, Job, JobStatus, ParsedCommand, Redirect, RedirectMode,
     build_builtins, jobs_table, next_job_id, parse_command, search_path, tokenize,
 };
 use std::collections::HashMap;
@@ -95,6 +95,7 @@ fn dispatch(command: ParsedCommand, builtins: &HashMap<&'static str, Handler>) {
                             id,
                             pid,
                             command: cmdline,
+                            status: JobStatus::Running,
                             child,
                         });
                     }
