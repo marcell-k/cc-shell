@@ -34,9 +34,9 @@ impl Completer for CommandCompleterHelper {
 
             let matches: Vec<Pair> = search_filenames(arg_prefix)
                 .into_iter()
-                .map(|name| Pair {
+                .map(|(name, is_dir)| Pair {
                     display: name.clone(),
-                    replacement: format!("{} ", name),
+                    replacement: if is_dir { name } else { format!("{} ", name) },
                 })
                 .collect();
             return Ok((arg_start, matches));
@@ -102,8 +102,8 @@ pub fn search_executables(prefix: &str) -> Vec<String> {
     found.into_iter().collect()
 }
 
-pub fn search_filenames(prefix: &str) -> Vec<String> {
-    let mut found: HashSet<String> = HashSet::new();
+pub fn search_filenames(prefix: &str) -> Vec<(String, bool)> {
+    let mut found: HashSet<(String, bool)> = HashSet::new();
 
     let (dir_path, name_prefix) = match prefix.rfind('/') {
         Some(idx) => (&prefix[..=idx], &prefix[idx + 1..]),
@@ -126,7 +126,13 @@ pub fn search_filenames(prefix: &str) -> Vec<String> {
         let name = entry.file_name().to_string_lossy().into_owned();
 
         if name.starts_with(name_prefix) {
-            found.insert(format!("{}{}", dir_path, name)); // re-prepend dir_path to keep full path
+            let is_dir = entry.file_type().map(|t| t.is_dir()).unwrap_or(false);
+            let full = if is_dir {
+                format!("{}{}/", dir_path, name) // append slash now, no space added later
+            } else {
+                format!("{}{}", dir_path, name)
+            };
+            found.insert((full, is_dir));
         }
     }
 
