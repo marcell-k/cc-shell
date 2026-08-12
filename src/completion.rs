@@ -46,12 +46,7 @@ impl Completer for CommandCompleterHelper {
             let word_being_completed = &prefix[arg_start..];
 
             let before = prefix[..arg_start].trim_end();
-            let before_tokens: Vec<&str> = before.split_whitespace().collect();
-            let prev_word = if before_tokens.len() > 1 {
-                before_tokens[before_tokens.len() - 1]
-            } else {
-                ""
-            };
+            let prev_word = before.split_whitespace().last().unwrap_or("");
 
             let output = match Command::new(&script_path)
                 .arg(cmd_name)
