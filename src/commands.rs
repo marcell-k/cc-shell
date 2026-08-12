@@ -5,7 +5,7 @@ use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
-use crate::Token;
+use crate::{RedirectMode, Token};
 
 pub type Handler = fn(&ParsedCommand, &mut Io);
 
@@ -19,6 +19,8 @@ pub struct ParsedCommand {
     pub args: Vec<String>,
     pub stdout_redirect: Option<PathBuf>,
     pub stderr_redirect: Option<PathBuf>,
+    pub stdout_append: bool,
+    pub stderr_append: bool,
 }
 
 pub fn parse_command(tokens: Vec<Token>) -> ParsedCommand {
@@ -30,14 +32,22 @@ pub fn parse_command(tokens: Vec<Token>) -> ParsedCommand {
     let mut args: Vec<String> = Vec::new();
     let mut stdout_redirect: Option<PathBuf> = None;
     let mut stderr_redirect: Option<PathBuf> = None;
+    let mut stdout_append = false;
+    let mut stderr_append = false;
     while let Some(item) = iter.next() {
         match item {
             Token::Word(w) => args.push(w),
-            Token::Redirect(fd) => {
+            Token::Redirect(fd, mode) => {
                 if let Some(Token::Word(w)) = iter.next() {
                     match fd {
-                        2 => stderr_redirect = Some(w.into()),
-                        _ => stdout_redirect = Some(w.into()),
+                        2 => {
+                            stderr_redirect = Some(w.into());
+                            stderr_append = mode == RedirectMode::Append;
+                        }
+                        _ => {
+                            stdout_redirect = Some(w.into());
+                            stdout_append = mode == RedirectMode::Append;
+                        }
                     }
                 }
             }
@@ -49,6 +59,8 @@ pub fn parse_command(tokens: Vec<Token>) -> ParsedCommand {
         args,
         stdout_redirect,
         stderr_redirect,
+        stdout_append,
+        stderr_append,
     }
 }
 

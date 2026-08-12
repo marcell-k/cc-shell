@@ -1,9 +1,15 @@
 use std::mem;
 
 #[derive(Debug, PartialEq)]
+pub enum RedirectMode {
+    Truncate,
+    Append,
+}
+
+#[derive(Debug, PartialEq)]
 pub enum Token {
     Word(String),
-    Redirect(u8), // > 0-stdin, 1-stdout, 2-stderr
+    Redirect(u8, RedirectMode), // > 0-stdin, 1-stdout, 2-stderr
     Pipe,
 }
 
@@ -29,16 +35,23 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     None
                 };
 
+                let mode = if chars.peek() == Some(&'>') {
+                    chars.next();
+                    RedirectMode::Append
+                } else {
+                    RedirectMode::Truncate
+                };
+
                 if let Some(fd) = fd {
                     buf.clear();
                     in_token = false;
-                    out.push(Token::Redirect(fd));
+                    out.push(Token::Redirect(fd, mode));
                 } else {
                     if in_token {
                         out.push(Token::Word(mem::take(&mut buf)));
                     }
                     in_token = false;
-                    out.push(Token::Redirect(1)); // default fd 1
+                    out.push(Token::Redirect(1, mode)); // default
                 }
             }
             '\\' if quote == QuoteState::None => {
