@@ -88,6 +88,11 @@ pub fn complete_cmd(command: &ParsedCommand, io: &mut Io) {
                     .insert(name.clone(), path.clone());
             }
         }
+        Some("-r") => {
+            if let Some(name) = command.args.get(1) {
+                completions().lock().unwrap().remove(name);
+            }
+        }
         _ => {}
     }
 }
