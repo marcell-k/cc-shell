@@ -1,12 +1,15 @@
 use codecrafters_shell::{
-    Handler, Io, ParsedCommand, Redirect, RedirectMode, build_builtins, parse_command, search_path,
-    tokenize,
+    CommandCompleterHelper, Handler, Io, ParsedCommand, Redirect, RedirectMode, build_builtins,
+    parse_command, search_path, tokenize,
 };
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self, Write};
 use std::os::unix::process::CommandExt;
 use std::process::{Command, Stdio};
+
+use rustyline::Editor;
+use rustyline::error::ReadlineError;
 
 fn open_redirect(redirect: &Redirect) -> Option<File> {
     let mut opts = std::fs::OpenOptions::new();
@@ -82,15 +85,19 @@ fn dispatch(command: ParsedCommand, builtins: &HashMap<&'static str, Handler>) {
     }
 }
 
-fn main() {
+fn main() -> rustyline::Result<()> {
     let builtins = build_builtins();
+    let programs: Vec<&'static str> = builtins.keys().copied().collect();
+
+    let helper = CommandCompleterHelper { programs };
+    let mut rl = Editor::<CommandCompleterHelper, _>::new()?;
+    rl.set_helper(Some(helper));
     loop {
-        print!("$ ");
-        io::stdout().flush().unwrap();
-        let mut input = String::new();
-        if io::stdin().read_line(&mut input).unwrap() == 0 {
-            break;
-        }
+        let input = match rl.readline("$ ") {
+            Ok(line) => line,
+            Err(ReadlineError::Eof) | Err(ReadlineError::Interrupted) => break,
+            Err(e) => return Err(e),
+        };
         let input = input.trim();
         if input.is_empty() {
             continue;
@@ -102,4 +109,5 @@ fn main() {
         let command = parse_command(tokens);
         dispatch(command, &builtins);
     }
+    Ok(())
 }

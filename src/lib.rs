@@ -5,3 +5,6 @@ pub use commands::{
 };
 mod tokenizer;
 pub use tokenizer::{RedirectMode, Token, tokenize};
+
+mod completion;
+pub use completion::CommandCompleterHelper;
