@@ -43,8 +43,22 @@ impl Completer for CommandCompleterHelper {
 
         if let Some(script_path) = completions().lock().unwrap().get(cmd_name).cloned() {
             let arg_start = prefix.rfind(' ').map(|i| i + 1).unwrap_or(prefix.len());
+            let word_being_completed = &prefix[arg_start..];
 
-            let output = match Command::new(&script_path).output() {
+            let before = prefix[..arg_start].trim_end();
+            let before_tokens: Vec<&str> = before.split_whitespace().collect();
+            let prev_word = if before_tokens.len() > 1 {
+                before_tokens[before_tokens.len() - 1]
+            } else {
+                ""
+            };
+
+            let output = match Command::new(&script_path)
+                .arg(cmd_name)
+                .arg(word_being_completed)
+                .arg(prev_word)
+                .output()
+            {
                 Ok(o) => o,
                 Err(_) => return Ok((arg_start, Vec::new())),
             };
