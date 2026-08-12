@@ -57,6 +57,8 @@ impl Completer for CommandCompleterHelper {
                 .arg(cmd_name)
                 .arg(word_being_completed)
                 .arg(prev_word)
+                .env("COMP_LINE", line)
+                .env("COMP_POINT", pos.to_string())
                 .output()
             {
                 Ok(o) => o,
