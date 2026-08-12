@@ -57,7 +57,7 @@ pub fn parse_command(tokens: Vec<Token>) -> ParsedCommand {
                     }
                 }
             }
-            Token::Pipe => {}
+            Token::Pipeline => {}
             Token::Background => background = true,
         }
     }
@@ -68,6 +68,17 @@ pub fn parse_command(tokens: Vec<Token>) -> ParsedCommand {
         stderr_redirect,
         background,
     }
+}
+
+pub fn split_pipeline(tokens: Vec<Token>) -> Vec<Vec<Token>> {
+    let mut groups: Vec<Vec<Token>> = vec![Vec::new()];
+    for token in tokens {
+        match token {
+            Token::Pipeline => groups.push(Vec::new()),
+            other => groups.last_mut().unwrap().push(other),
+        }
+    }
+    groups
 }
 
 pub fn complete_cmd(command: &ParsedCommand, io: &mut Io) {

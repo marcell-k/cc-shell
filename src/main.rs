@@ -1,12 +1,13 @@
 use codecrafters_shell::{
     CommandCompleterHelper, Handler, Io, Job, JobStatus, ParsedCommand, Redirect, RedirectMode,
-    build_builtins, jobs_table, next_job_id, parse_command, reap_jobs, search_path, tokenize,
+    build_builtins, jobs_table, next_job_id, parse_command, reap_jobs, search_path, split_pipeline,
+    tokenize,
 };
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self, Write};
 use std::os::unix::process::CommandExt;
-use std::process::{Command, Stdio};
+use std::process::{Child, Command, Stdio};
 
 use rustyline::error::ReadlineError;
 use rustyline::{Config, Editor};
@@ -111,6 +112,75 @@ fn dispatch(command: ParsedCommand, builtins: &HashMap<&'static str, Handler>) {
     }
 }
 
+fn dispatch_pipeline(mut commands: Vec<ParsedCommand>, builtins: &HashMap<&'static str, Handler>) {
+    if commands.len() == 1 {
+        let command = commands.pop().unwrap();
+        dispatch(command, builtins);
+        return;
+    }
+
+    let mut children: Vec<Child> = Vec::new();
+
+    let mut prev_stdout: Option<std::process::ChildStdout> = None;
+
+    let last_index = commands.len() - 1;
+
+    for (i, command) in commands.into_iter().enumerate() {
+        let is_last = i == last_index;
+
+        let path = match search_path(&command.program) {
+            Some(p) => p,
+            None => {
+                println!("{}: command not found", command.program);
+                return;
+            }
+        };
+
+        let mut cmd = Command::new(&path);
+        cmd.arg0(&command.program).args(&command.args);
+
+        if let Some(stdout) = prev_stdout.take() {
+            cmd.stdin(Stdio::from(stdout));
+        }
+
+        if is_last {
+            if let Some(redirect) = &command.stdout_redirect {
+                if let Some(file) = open_redirect(redirect) {
+                    cmd.stdout(Stdio::from(file));
+                } else {
+                    return;
+                }
+            }
+        } else {
+            cmd.stdout(Stdio::piped());
+        }
+
+        if let Some(redirect) = &command.stderr_redirect {
+            match open_redirect(redirect) {
+                Some(file) => {
+                    cmd.stderr(Stdio::from(file));
+                }
+                None => return,
+            }
+        }
+
+        match cmd.spawn() {
+            Ok(mut child) => {
+                prev_stdout = child.stdout.take();
+                children.push(child);
+            }
+            Err(e) => {
+                eprintln!("{}: {}", command.program, e);
+                return;
+            }
+        }
+    }
+
+    for mut child in children {
+        let _ = child.wait();
+    }
+}
+
 fn main() -> rustyline::Result<()> {
     let builtins = build_builtins();
     let programs: Vec<&'static str> = builtins.keys().copied().collect();
@@ -136,8 +206,11 @@ fn main() -> rustyline::Result<()> {
         if tokens.is_empty() {
             continue;
         }
-        let command = parse_command(tokens);
-        dispatch(command, &builtins);
+        let commands: Vec<ParsedCommand> = split_pipeline(tokens)
+            .into_iter()
+            .map(parse_command)
+            .collect();
+        dispatch_pipeline(commands, &builtins);
     }
     Ok(())
 }
