@@ -105,7 +105,14 @@ pub fn search_executables(prefix: &str) -> Vec<String> {
 pub fn search_filenames(prefix: &str) -> Vec<String> {
     let mut found: HashSet<String> = HashSet::new();
 
-    let entries = match fs::read_dir(".") {
+    let (dir_path, name_prefix) = match prefix.rfind('/') {
+        Some(idx) => (&prefix[..=idx], &prefix[idx + 1..]),
+        None => ("", prefix),
+    };
+
+    let read_dir_target = if dir_path.is_empty() { "." } else { dir_path };
+
+    let entries = match fs::read_dir(read_dir_target) {
         Ok(e) => e,
         Err(_) => return Vec::new(),
     };
@@ -118,8 +125,8 @@ pub fn search_filenames(prefix: &str) -> Vec<String> {
 
         let name = entry.file_name().to_string_lossy().into_owned();
 
-        if name.starts_with(prefix) {
-            found.insert(name);
+        if name.starts_with(name_prefix) {
+            found.insert(format!("{}{}", dir_path, name)); // re-prepend dir_path to keep full path
         }
     }
 
