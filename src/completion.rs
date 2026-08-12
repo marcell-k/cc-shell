@@ -23,8 +23,23 @@ impl Completer for CommandCompleterHelper {
         _ctx: &Context<'_>,
     ) -> Result<(usize, Vec<Self::Candidate>), rustyline::error::ReadlineError> {
         let prefix = &line[..pos];
-        if prefix.contains(' ') || line.is_empty() {
+        if line.is_empty() {
             return Ok((0, Vec::new()));
+        }
+
+        // File name
+        if let Some(last_space_idx) = prefix.rfind(" ") {
+            let arg_start = last_space_idx + 1;
+            let arg_prefix = &prefix[arg_start..];
+
+            let matches: Vec<Pair> = search_filenames(arg_prefix)
+                .into_iter()
+                .map(|name| Pair {
+                    display: name.clone(),
+                    replacement: format!("{} ", name),
+                })
+                .collect();
+            return Ok((arg_start, matches));
         }
 
         let builtin_matches = self
@@ -84,5 +99,29 @@ pub fn search_executables(prefix: &str) -> Vec<String> {
             }
         }
     }
+    found.into_iter().collect()
+}
+
+pub fn search_filenames(prefix: &str) -> Vec<String> {
+    let mut found: HashSet<String> = HashSet::new();
+
+    let entries = match fs::read_dir(".") {
+        Ok(e) => e,
+        Err(_) => return Vec::new(),
+    };
+
+    for entry in entries {
+        let entry = match entry {
+            Ok(e) => e,
+            Err(_) => continue,
+        };
+
+        let name = entry.file_name().to_string_lossy().into_owned();
+
+        if name.starts_with(prefix) {
+            found.insert(name);
+        }
+    }
+
     found.into_iter().collect()
 }
