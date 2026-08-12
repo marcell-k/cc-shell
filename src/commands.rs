@@ -4,6 +4,8 @@ use std::fs;
 use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
+use std::sync::Mutex;
+use std::sync::OnceLock;
 
 use crate::{RedirectMode, Token};
 
@@ -66,14 +68,35 @@ pub fn parse_command(tokens: Vec<Token>) -> ParsedCommand {
     }
 }
 
+static COMPLETIONS: OnceLock<Mutex<HashMap<String, String>>> = OnceLock::new();
+fn completions() -> &'static Mutex<HashMap<String, String>> {
+    COMPLETIONS.get_or_init(|| Mutex::new(HashMap::new()))
+}
 pub fn complete_cmd(command: &ParsedCommand, io: &mut Io) {
-    if command.args.first().map(String::as_str) == Some("-p")
-        && let Some(name) = command.args.get(1)
-    {
-        writeln!(io.err, "complete: {}: no completion specification", name).ok();
+    match command.args.first().map(String::as_str) {
+        Some("-p") => {
+            if let Some(name) = command.args.get(1) {
+                match completions().lock().unwrap().get(name) {
+                    Some(path) => {
+                        writeln!(io.out, "complete -C '{}' {}", path, name).ok();
+                    }
+                    None => {
+                        writeln!(io.err, "complete: {}: no completion specification", name).ok();
+                    }
+                }
+            }
+        }
+        Some("-C") => {
+            if let (Some(path), Some(name)) = (command.args.get(1), command.args.get(2)) {
+                completions()
+                    .lock()
+                    .unwrap()
+                    .insert(name.clone(), path.clone());
+            }
+        }
+        _ => {}
     }
 }
-
 pub fn exit_cmd(_command: &ParsedCommand, _io: &mut Io) {
     std::process::exit(0)
 }
