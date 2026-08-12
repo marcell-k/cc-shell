@@ -14,13 +14,15 @@ pub struct Io<'a> {
     pub err: &'a mut dyn Write,
 }
 
+pub struct Redirect {
+    pub path: PathBuf,
+    pub mode: RedirectMode,
+}
 pub struct ParsedCommand {
     pub program: String,
     pub args: Vec<String>,
-    pub stdout_redirect: Option<PathBuf>,
-    pub stderr_redirect: Option<PathBuf>,
-    pub stdout_append: bool,
-    pub stderr_append: bool,
+    pub stdout_redirect: Option<Redirect>,
+    pub stderr_redirect: Option<Redirect>,
 }
 
 pub fn parse_command(tokens: Vec<Token>) -> ParsedCommand {
@@ -30,10 +32,8 @@ pub fn parse_command(tokens: Vec<Token>) -> ParsedCommand {
         _ => String::new(),
     };
     let mut args: Vec<String> = Vec::new();
-    let mut stdout_redirect: Option<PathBuf> = None;
-    let mut stderr_redirect: Option<PathBuf> = None;
-    let mut stdout_append = false;
-    let mut stderr_append = false;
+    let mut stdout_redirect: Option<Redirect> = None;
+    let mut stderr_redirect: Option<Redirect> = None;
     while let Some(item) = iter.next() {
         match item {
             Token::Word(w) => args.push(w),
@@ -41,12 +41,16 @@ pub fn parse_command(tokens: Vec<Token>) -> ParsedCommand {
                 if let Some(Token::Word(w)) = iter.next() {
                     match fd {
                         2 => {
-                            stderr_redirect = Some(w.into());
-                            stderr_append = mode == RedirectMode::Append;
+                            stderr_redirect = Some(Redirect {
+                                path: w.into(),
+                                mode,
+                            });
                         }
                         _ => {
-                            stdout_redirect = Some(w.into());
-                            stdout_append = mode == RedirectMode::Append;
+                            stdout_redirect = Some(Redirect {
+                                path: w.into(),
+                                mode,
+                            });
                         }
                     }
                 }
@@ -59,8 +63,6 @@ pub fn parse_command(tokens: Vec<Token>) -> ParsedCommand {
         args,
         stdout_redirect,
         stderr_redirect,
-        stdout_append,
-        stderr_append,
     }
 }
 

@@ -1,5 +1,6 @@
 use codecrafters_shell::{
-    Handler, Io, ParsedCommand, build_builtins, parse_command, search_path, tokenize,
+    Handler, Io, ParsedCommand, Redirect, RedirectMode, build_builtins, parse_command, search_path,
+    tokenize,
 };
 use std::collections::HashMap;
 use std::fs::File;
@@ -7,11 +8,21 @@ use std::io::{self, Write};
 use std::os::unix::process::CommandExt;
 use std::process::{Command, Stdio};
 
-fn open_redirect(path: &std::path::Path) -> Option<File> {
-    match File::create(path) {
+fn open_redirect(redirect: &Redirect) -> Option<File> {
+    let mut opts = std::fs::OpenOptions::new();
+    opts.write(true).create(true);
+    match redirect.mode {
+        RedirectMode::Truncate => {
+            opts.truncate(true);
+        }
+        RedirectMode::Append => {
+            opts.append(true);
+        }
+    }
+    match opts.open(&redirect.path) {
         Ok(f) => Some(f),
         Err(e) => {
-            eprintln!("{}: {}", path.display(), e);
+            eprintln!("{}: {}", redirect.path.display(), e);
             None
         }
     }
