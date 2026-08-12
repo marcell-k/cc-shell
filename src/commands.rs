@@ -7,12 +7,18 @@ use std::path::PathBuf;
 
 use crate::Token;
 
-pub type Handler = fn(&ParsedCommand, &mut dyn Write);
+pub type Handler = fn(&ParsedCommand, &mut Io);
+
+pub struct Io<'a> {
+    pub out: &'a mut dyn Write,
+    pub err: &'a mut dyn Write,
+}
 
 pub struct ParsedCommand {
     pub program: String,
     pub args: Vec<String>,
-    pub stdout_redirect: Option<(u8, PathBuf)>,
+    pub stdout_redirect: Option<PathBuf>,
+    pub stderr_redirect: Option<PathBuf>,
 }
 
 pub fn parse_command(tokens: Vec<Token>) -> ParsedCommand {
@@ -22,13 +28,17 @@ pub fn parse_command(tokens: Vec<Token>) -> ParsedCommand {
         _ => String::new(),
     };
     let mut args: Vec<String> = Vec::new();
-    let mut stdout_redirect: Option<(u8, PathBuf)> = None;
+    let mut stdout_redirect: Option<PathBuf> = None;
+    let mut stderr_redirect: Option<PathBuf> = None;
     while let Some(item) = iter.next() {
         match item {
             Token::Word(w) => args.push(w),
             Token::Redirect(fd) => {
                 if let Some(Token::Word(w)) = iter.next() {
-                    stdout_redirect = Some((fd, w.into()))
+                    match fd {
+                        2 => stderr_redirect = Some(w.into()),
+                        _ => stdout_redirect = Some(w.into()),
+                    }
                 }
             }
             Token::Pipe => {}
@@ -38,22 +48,23 @@ pub fn parse_command(tokens: Vec<Token>) -> ParsedCommand {
         program,
         args,
         stdout_redirect,
+        stderr_redirect,
     }
 }
 
-pub fn exit_cmd(_command: &ParsedCommand, _out: &mut dyn Write) {
+pub fn exit_cmd(_command: &ParsedCommand, _io: &mut Io) {
     std::process::exit(0)
 }
 
-pub fn echo_cmd(command: &ParsedCommand, out: &mut dyn Write) {
-    writeln!(out, "{}", command.args.join(" ")).ok();
+pub fn echo_cmd(command: &ParsedCommand, io: &mut Io) {
+    writeln!(io.out, "{}", command.args.join(" ")).ok();
 }
 
-pub fn pwd_cmd(_command: &ParsedCommand, out: &mut dyn Write) {
-    writeln!(out, "{}", env::current_dir().unwrap().display()).ok();
+pub fn pwd_cmd(_command: &ParsedCommand, io: &mut Io) {
+    writeln!(io.out, "{}", env::current_dir().unwrap().display()).ok();
 }
 
-pub fn cd_cmd(command: &ParsedCommand, _out: &mut dyn Write) {
+pub fn cd_cmd(command: &ParsedCommand, io: &mut Io) {
     let target = match command.args.first() {
         Some(t) => t.as_str(),
         None => return,
@@ -72,26 +83,26 @@ pub fn cd_cmd(command: &ParsedCommand, _out: &mut dyn Write) {
         PathBuf::from(target)
     };
     if env::set_current_dir(&path).is_err() {
-        println!("cd: {}: No such file or directory", target)
+        writeln!(io.err, "cd: {}: No such file or directory", target).ok();
     }
 }
 
-pub fn type_cmd(command: &ParsedCommand, out: &mut dyn Write) {
+pub fn type_cmd(command: &ParsedCommand, io: &mut Io) {
     let target = match command.args.first() {
         Some(t) => t.as_str(),
         None => return,
     };
     let builtins = build_builtins();
     if builtins.contains_key(target) {
-        writeln!(out, "{} is a shell builtin", target).ok();
+        writeln!(io.out, "{} is a shell builtin", target).ok();
         return;
     }
     match search_path(target) {
         Some(path) => {
-            writeln!(out, "{} is {}", target, path.display()).ok();
+            writeln!(io.out, "{} is {}", target, path.display()).ok();
         }
         None => {
-            writeln!(out, "{}: not found", target).ok();
+            writeln!(io.out, "{}: not found", target).ok();
         }
     }
 }
