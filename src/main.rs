@@ -8,8 +8,8 @@ use std::io::{self, Write};
 use std::os::unix::process::CommandExt;
 use std::process::{Command, Stdio};
 
-use rustyline::Editor;
 use rustyline::error::ReadlineError;
+use rustyline::{Config, Editor};
 
 fn open_redirect(redirect: &Redirect) -> Option<File> {
     let mut opts = std::fs::OpenOptions::new();
@@ -90,7 +90,10 @@ fn main() -> rustyline::Result<()> {
     let programs: Vec<&'static str> = builtins.keys().copied().collect();
 
     let helper = CommandCompleterHelper { programs };
-    let mut rl = Editor::<CommandCompleterHelper, _>::new()?;
+    let config = Config::builder()
+        .completion_type(rustyline::CompletionType::List)
+        .build();
+    let mut rl = Editor::<CommandCompleterHelper, _>::with_config(config)?;
     rl.set_helper(Some(helper));
     loop {
         let input = match rl.readline("$ ") {

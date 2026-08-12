@@ -41,7 +41,8 @@ impl Completer for CommandCompleterHelper {
             replacement: format!("{} ", name),
         });
 
-        let matches: Vec<Pair> = builtin_matches.chain(exec_matches).collect();
+        let mut matches: Vec<Pair> = builtin_matches.chain(exec_matches).collect();
+        matches.sort_by(|a, b| a.display.cmp(&b.display));
         Ok((0, matches))
     }
 }
