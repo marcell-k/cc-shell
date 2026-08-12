@@ -97,9 +97,7 @@ pub fn complete_cmd(command: &ParsedCommand, io: &mut Io) {
     }
 }
 
-pub fn job_cmd(_command: &ParsedCommand, _io: &mut Io) {
-    todo!()
-}
+pub fn job_cmd(_command: &ParsedCommand, _io: &mut Io) {}
 
 pub fn exit_cmd(_command: &ParsedCommand, _io: &mut Io) {
     std::process::exit(0)
