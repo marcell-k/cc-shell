@@ -11,6 +11,7 @@ pub enum Token {
     Word(String),
     Redirect(u8, RedirectMode), // > 0-stdin, 1-stdout, 2-stderr
     Pipe,
+    Background, // &
 }
 
 #[derive(PartialEq)]
@@ -88,6 +89,13 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     QuoteState::Double
                 };
                 in_token = true;
+            }
+            '&' if quote == QuoteState::None => {
+                if in_token {
+                    out.push(Token::Word(mem::take(&mut buf)));
+                    in_token = false;
+                }
+                out.push(Token::Background);
             }
             ' ' | '\t' if quote == QuoteState::None => {
                 if in_token {

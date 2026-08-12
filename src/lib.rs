@@ -8,3 +8,6 @@ pub use tokenizer::{RedirectMode, Token, tokenize};
 
 mod completion;
 pub use completion::{COMPLETIONS, CommandCompleterHelper, completions};
+
+mod jobs;
+pub use jobs::{JOBS, Job, jobs_table, next_job_id};

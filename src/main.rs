@@ -1,6 +1,6 @@
 use codecrafters_shell::{
-    CommandCompleterHelper, Handler, Io, ParsedCommand, Redirect, RedirectMode, build_builtins,
-    parse_command, search_path, tokenize,
+    CommandCompleterHelper, Handler, Io, Job, ParsedCommand, Redirect, RedirectMode,
+    build_builtins, jobs_table, next_job_id, parse_command, search_path, tokenize,
 };
 use std::collections::HashMap;
 use std::fs::File;
@@ -77,8 +77,33 @@ fn dispatch(command: ParsedCommand, builtins: &HashMap<&'static str, Handler>) {
             if let Some(file) = stderr_file {
                 cmd.stderr(Stdio::from(file));
             }
-            if let Err(e) = cmd.status() {
-                eprintln!("{}: {}", command.program, e);
+
+            if command.background {
+                match cmd.spawn() {
+                    Ok(child) => {
+                        let pid = child.id();
+                        let id = next_job_id();
+
+                        println!("[{}] {}", id, pid);
+
+                        let cmdline = std::iter::once(command.program.clone())
+                            .chain(command.args.iter().cloned())
+                            .collect::<Vec<_>>()
+                            .join(" ");
+
+                        jobs_table().lock().unwrap().push(Job {
+                            id,
+                            pid,
+                            command: cmdline,
+                            child,
+                        });
+                    }
+                    Err(e) => eprintln!("{}: {}", command.program, e),
+                }
+            } else {
+                if let Err(e) = cmd.status() {
+                    eprintln!("{}: {}", command.program, e);
+                }
             }
         }
         None => println!("{}: command not found", command.program),

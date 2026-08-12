@@ -23,6 +23,7 @@ pub struct ParsedCommand {
     pub args: Vec<String>,
     pub stdout_redirect: Option<Redirect>,
     pub stderr_redirect: Option<Redirect>,
+    pub background: bool,
 }
 
 pub fn parse_command(tokens: Vec<Token>) -> ParsedCommand {
@@ -34,6 +35,7 @@ pub fn parse_command(tokens: Vec<Token>) -> ParsedCommand {
     let mut args: Vec<String> = Vec::new();
     let mut stdout_redirect: Option<Redirect> = None;
     let mut stderr_redirect: Option<Redirect> = None;
+    let mut background = false;
     while let Some(item) = iter.next() {
         match item {
             Token::Word(w) => args.push(w),
@@ -56,6 +58,7 @@ pub fn parse_command(tokens: Vec<Token>) -> ParsedCommand {
                 }
             }
             Token::Pipe => {}
+            Token::Background => background = true,
         }
     }
     ParsedCommand {
@@ -63,6 +66,7 @@ pub fn parse_command(tokens: Vec<Token>) -> ParsedCommand {
         args,
         stdout_redirect,
         stderr_redirect,
+        background,
     }
 }
 
