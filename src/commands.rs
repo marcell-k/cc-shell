@@ -66,6 +66,10 @@ pub fn parse_command(tokens: Vec<Token>) -> ParsedCommand {
     }
 }
 
+pub fn complete_cmd(_command: &ParsedCommand, _io: &mut Io) {
+    todo!()
+}
+
 pub fn exit_cmd(_command: &ParsedCommand, _io: &mut Io) {
     std::process::exit(0)
 }
@@ -128,6 +132,7 @@ pub fn build_builtins() -> HashMap<&'static str, Handler> {
     m.insert("pwd", pwd_cmd);
     m.insert("cd", cd_cmd);
     m.insert("type", type_cmd);
+    m.insert("complete", complete_cmd);
     m
 }
 

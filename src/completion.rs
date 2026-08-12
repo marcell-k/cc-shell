@@ -39,7 +39,7 @@ impl Completer for CommandCompleterHelper {
                     replacement: if is_dir { name } else { format!("{} ", name) },
                 })
                 .collect();
-            matches.sort_by(|a, b| a.display.cmp(&b.display)); // alphabetical for multi-match listing
+            matches.sort_by(|a, b| a.display.cmp(&b.display));
             return Ok((arg_start, matches));
         }
 
