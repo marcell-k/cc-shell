@@ -5,6 +5,7 @@ use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
+use crate::Job;
 use crate::jobs_table;
 use crate::{RedirectMode, Token, completions};
 
@@ -105,8 +106,29 @@ pub fn complete_cmd(command: &ParsedCommand, io: &mut Io) {
 pub fn jobs_cmd(_command: &ParsedCommand, io: &mut Io) {
     let jobs = jobs_table().lock().unwrap();
 
+    let mut ids: Vec<u32> = jobs.iter().map(|j| j.id).collect();
+    ids.sort_unstable_by(|a, b| b.cmp(a));
+
+    let current = ids.first().copied();
+    let previous = ids.get(1).copied();
+
+    let mut display: Vec<&Job> = jobs.iter().collect();
+    display.sort_unstable_by_key(|j| j.id);
+
     for job in jobs.iter() {
-        writeln!(io.out, "[{}]+  {:<24}{}", job.id, "Running", job.command).ok();
+        let marker = if Some(job.id) == current {
+            "+"
+        } else if Some(job.id) == previous {
+            "-"
+        } else {
+            " "
+        };
+        writeln!(
+            io.out,
+            "[{}]{}  {:<24}{}",
+            job.id, marker, "Running", job.command
+        )
+        .ok();
     }
 }
 
