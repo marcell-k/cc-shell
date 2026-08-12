@@ -5,9 +5,7 @@ use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
-use crate::Job;
-use crate::jobs_table;
-use crate::{RedirectMode, Token, completions, reap_jobs};
+use crate::{RedirectMode, Token, completions, jobs_cmd};
 
 pub type Handler = fn(&ParsedCommand, &mut Io);
 
@@ -100,37 +98,6 @@ pub fn complete_cmd(command: &ParsedCommand, io: &mut Io) {
             }
         }
         _ => {}
-    }
-}
-
-pub fn jobs_cmd(_command: &ParsedCommand, io: &mut Io) {
-    reap_jobs(io.out);
-
-    let jobs = jobs_table().lock().unwrap();
-
-    let mut ids: Vec<u32> = jobs.iter().map(|j| j.id).collect();
-    ids.sort_unstable_by(|a, b| b.cmp(a));
-    let current = ids.first().copied();
-    let previous = ids.get(1).copied();
-
-    let mut display: Vec<&Job> = jobs.iter().collect();
-    display.sort_unstable_by_key(|j| j.id);
-
-    for job in display {
-        let marker = if Some(job.id) == current {
-            '+'
-        } else if Some(job.id) == previous {
-            '-'
-        } else {
-            ' '
-        };
-        let cmdline = format!("{} &", job.command);
-        writeln!(
-            io.out,
-            "[{}]{}  {:<24}{}",
-            job.id, marker, "Running", cmdline
-        )
-        .ok();
     }
 }
 
