@@ -66,8 +66,12 @@ pub fn parse_command(tokens: Vec<Token>) -> ParsedCommand {
     }
 }
 
-pub fn complete_cmd(_command: &ParsedCommand, _io: &mut Io) {
-    todo!()
+pub fn complete_cmd(command: &ParsedCommand, io: &mut Io) {
+    if command.args.first().map(String::as_str) == Some("-p")
+        && let Some(name) = command.args.get(1)
+    {
+        writeln!(io.err, "complete: {}: no completion specification", name).ok();
+    }
 }
 
 pub fn exit_cmd(_command: &ParsedCommand, _io: &mut Io) {
