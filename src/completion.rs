@@ -32,13 +32,14 @@ impl Completer for CommandCompleterHelper {
             let arg_start = last_space_idx + 1;
             let arg_prefix = &prefix[arg_start..];
 
-            let matches: Vec<Pair> = search_filenames(arg_prefix)
+            let mut matches: Vec<Pair> = search_filenames(arg_prefix)
                 .into_iter()
                 .map(|(name, is_dir)| Pair {
                     display: name.clone(),
                     replacement: if is_dir { name } else { format!("{} ", name) },
                 })
                 .collect();
+            matches.sort_by(|a, b| a.display.cmp(&b.display)); // alphabetical for multi-match listing
             return Ok((arg_start, matches));
         }
 
