@@ -10,6 +10,18 @@ use std::{env, fs};
 
 use std::collections::HashSet;
 use std::result::Result;
+
+use std::collections::HashMap;
+use std::process::Command;
+use std::sync::Mutex;
+use std::sync::OnceLock;
+
+pub static COMPLETIONS: OnceLock<Mutex<HashMap<String, String>>> = OnceLock::new();
+
+pub fn completions() -> &'static Mutex<HashMap<String, String>> {
+    COMPLETIONS.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
 pub struct CommandCompleterHelper {
     pub programs: Vec<&'static str>,
 }
@@ -25,6 +37,28 @@ impl Completer for CommandCompleterHelper {
         let prefix = &line[..pos];
         if line.is_empty() {
             return Ok((0, Vec::new()));
+        }
+        // command name is always the first whitespace-separated word
+        let cmd_name = line.split_whitespace().next().unwrap_or("");
+
+        if let Some(script_path) = completions().lock().unwrap().get(cmd_name).cloned() {
+            let arg_start = prefix.rfind(' ').map(|i| i + 1).unwrap_or(prefix.len());
+
+            let output = match Command::new(&script_path).output() {
+                Ok(o) => o,
+                Err(_) => return Ok((arg_start, Vec::new())),
+            };
+
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let matches: Vec<Pair> = match stdout.lines().next() {
+                Some(candidate) => vec![Pair {
+                    display: candidate.to_string(),
+                    replacement: format!("{} ", candidate),
+                }],
+                None => Vec::new(),
+            };
+
+            return Ok((arg_start, matches));
         }
 
         // File name

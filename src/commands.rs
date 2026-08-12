@@ -4,10 +4,8 @@ use std::fs;
 use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
-use std::sync::Mutex;
-use std::sync::OnceLock;
 
-use crate::{RedirectMode, Token};
+use crate::{RedirectMode, Token, completions};
 
 pub type Handler = fn(&ParsedCommand, &mut Io);
 
@@ -68,10 +66,6 @@ pub fn parse_command(tokens: Vec<Token>) -> ParsedCommand {
     }
 }
 
-static COMPLETIONS: OnceLock<Mutex<HashMap<String, String>>> = OnceLock::new();
-fn completions() -> &'static Mutex<HashMap<String, String>> {
-    COMPLETIONS.get_or_init(|| Mutex::new(HashMap::new()))
-}
 pub fn complete_cmd(command: &ParsedCommand, io: &mut Io) {
     match command.args.first().map(String::as_str) {
         Some("-p") => {

@@ -7,4 +7,4 @@ mod tokenizer;
 pub use tokenizer::{RedirectMode, Token, tokenize};
 
 mod completion;
-pub use completion::CommandCompleterHelper;
+pub use completion::{COMPLETIONS, CommandCompleterHelper, completions};
