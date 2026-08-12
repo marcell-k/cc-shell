@@ -5,6 +5,7 @@ use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
+use crate::jobs_table;
 use crate::{RedirectMode, Token, completions};
 
 pub type Handler = fn(&ParsedCommand, &mut Io);
@@ -101,7 +102,13 @@ pub fn complete_cmd(command: &ParsedCommand, io: &mut Io) {
     }
 }
 
-pub fn jobs_cmd(_command: &ParsedCommand, _io: &mut Io) {}
+pub fn jobs_cmd(_command: &ParsedCommand, io: &mut Io) {
+    let jobs = jobs_table().lock().unwrap();
+
+    for job in jobs.iter() {
+        writeln!(io.out, "[{}]+  {:<24}{}", job.id, "Running", job.command).ok();
+    }
+}
 
 pub fn exit_cmd(_command: &ParsedCommand, _io: &mut Io) {
     std::process::exit(0)
