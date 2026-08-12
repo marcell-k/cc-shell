@@ -1,6 +1,6 @@
 use codecrafters_shell::{
     CommandCompleterHelper, Handler, Io, Job, JobStatus, ParsedCommand, Redirect, RedirectMode,
-    build_builtins, jobs_table, next_job_id, parse_command, search_path, tokenize,
+    build_builtins, jobs_table, next_job_id, parse_command, reap_jobs, search_path, tokenize,
 };
 use std::collections::HashMap;
 use std::fs::File;
@@ -122,6 +122,7 @@ fn main() -> rustyline::Result<()> {
     let mut rl = Editor::<CommandCompleterHelper, _>::with_config(config)?;
     rl.set_helper(Some(helper));
     loop {
+        reap_jobs(&mut io::stdout());
         let input = match rl.readline("$ ") {
             Ok(line) => line,
             Err(ReadlineError::Eof) | Err(ReadlineError::Interrupted) => break,

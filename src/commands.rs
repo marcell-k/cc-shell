@@ -6,9 +6,8 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
 use crate::Job;
-use crate::JobStatus;
 use crate::jobs_table;
-use crate::{RedirectMode, Token, completions};
+use crate::{RedirectMode, Token, completions, reap_jobs};
 
 pub type Handler = fn(&ParsedCommand, &mut Io);
 
@@ -105,16 +104,12 @@ pub fn complete_cmd(command: &ParsedCommand, io: &mut Io) {
 }
 
 pub fn jobs_cmd(_command: &ParsedCommand, io: &mut Io) {
-    let mut jobs = jobs_table().lock().unwrap();
+    reap_jobs(io.out);
 
-    for job in jobs.iter_mut() {
-        if let Ok(Some(_exit_status)) = job.child.try_wait() {
-            job.status = JobStatus::Done;
-        }
-    }
+    let jobs = jobs_table().lock().unwrap();
 
     let mut ids: Vec<u32> = jobs.iter().map(|j| j.id).collect();
-    ids.sort_unstable_by(|a, b| b.cmp(a)); // descending: highest id first
+    ids.sort_unstable_by(|a, b| b.cmp(a));
     let current = ids.first().copied();
     let previous = ids.get(1).copied();
 
@@ -129,16 +124,14 @@ pub fn jobs_cmd(_command: &ParsedCommand, io: &mut Io) {
         } else {
             ' '
         };
-
-        let (status, cmdline) = match job.status {
-            JobStatus::Done => ("Done", job.command.clone()),
-            JobStatus::Running => ("Running", format!("{} &", job.command)),
-        };
-
-        writeln!(io.out, "[{}]{}  {:<24}{}", job.id, marker, status, cmdline).ok();
+        let cmdline = format!("{} &", job.command);
+        writeln!(
+            io.out,
+            "[{}]{}  {:<24}{}",
+            job.id, marker, "Running", cmdline
+        )
+        .ok();
     }
-
-    jobs.retain(|job| job.status != JobStatus::Done);
 }
 
 pub fn exit_cmd(_command: &ParsedCommand, _io: &mut Io) {
