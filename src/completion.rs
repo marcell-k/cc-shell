@@ -66,13 +66,14 @@ impl Completer for CommandCompleterHelper {
             };
 
             let stdout = String::from_utf8_lossy(&output.stdout);
-            let matches: Vec<Pair> = match stdout.lines().next() {
-                Some(candidate) => vec![Pair {
-                    display: candidate.to_string(),
-                    replacement: format!("{} ", candidate),
-                }],
-                None => Vec::new(),
-            };
+            let mut matches: Vec<Pair> = stdout
+                .lines()
+                .map(|canditate| Pair {
+                    display: canditate.to_string(),
+                    replacement: format!("{} ", canditate),
+                })
+                .collect();
+            matches.sort_by(|a, b| a.display.cmp(&b.display));
 
             return Ok((arg_start, matches));
         }
