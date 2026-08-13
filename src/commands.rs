@@ -113,8 +113,9 @@ pub fn complete_cmd(command: &ParsedCommand, io: &mut Io) {
     }
 }
 
-pub fn history_cmd(_command: &ParsedCommand, io: &mut Io) {
-    history::print_history(io.out);
+pub fn history_cmd(command: &ParsedCommand, io: &mut Io) {
+    let limit = command.args.first().and_then(|s| s.parse::<usize>().ok());
+    history::print_history(io.out, limit);
 }
 
 pub fn exit_cmd(_command: &ParsedCommand, _io: &mut Io) {
