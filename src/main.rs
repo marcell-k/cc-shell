@@ -121,12 +121,48 @@ fn dispatch_pipeline(mut commands: Vec<ParsedCommand>, builtins: &HashMap<&'stat
 
     let mut children: Vec<Child> = Vec::new();
 
-    let mut prev_stdout: Option<std::process::ChildStdout> = None;
-
     let last_index = commands.len() - 1;
+    let mut prev_stdio: Option<Stdio> = None;
 
     for (i, command) in commands.into_iter().enumerate() {
         let is_last = i == last_index;
+        if let Some(&handler) = builtins.get(command.program.as_str()) {
+            let mut out: Box<dyn Write> = if is_last {
+                match &command.stdout_redirect {
+                    Some(redirect) => match open_redirect(redirect) {
+                        Some(f) => Box::new(f),
+                        None => return,
+                    },
+                    None => Box::new(io::stdout()),
+                }
+            } else {
+                let (reader, writer) = match io::pipe() {
+                    Ok(p) => p,
+                    Err(e) => {
+                        eprintln!("pipe: {}", e);
+                        return;
+                    }
+                };
+                prev_stdio = Some(Stdio::from(reader));
+                Box::new(writer)
+            };
+
+            let mut stderr_handle = io::stderr();
+            let mut err: Box<dyn Write> = match &command.stderr_redirect {
+                Some(redirect) => match open_redirect(redirect) {
+                    Some(f) => Box::new(f),
+                    None => return,
+                },
+                None => Box::new(&mut stderr_handle),
+            };
+
+            let mut io_ctx = Io {
+                out: &mut *out,
+                err: &mut *err,
+            };
+            handler(&command, &mut io_ctx);
+            continue;
+        }
 
         let path = match search_path(&command.program) {
             Some(p) => p,
@@ -139,16 +175,17 @@ fn dispatch_pipeline(mut commands: Vec<ParsedCommand>, builtins: &HashMap<&'stat
         let mut cmd = Command::new(&path);
         cmd.arg0(&command.program).args(&command.args);
 
-        if let Some(stdout) = prev_stdout.take() {
-            cmd.stdin(Stdio::from(stdout));
+        if let Some(stdio) = prev_stdio.take() {
+            cmd.stdin(stdio);
         }
 
         if is_last {
             if let Some(redirect) = &command.stdout_redirect {
-                if let Some(file) = open_redirect(redirect) {
-                    cmd.stdout(Stdio::from(file));
-                } else {
-                    return;
+                match open_redirect(redirect) {
+                    Some(file) => {
+                        cmd.stdout(Stdio::from(file));
+                    }
+                    None => return,
                 }
             }
         } else {
@@ -166,7 +203,9 @@ fn dispatch_pipeline(mut commands: Vec<ParsedCommand>, builtins: &HashMap<&'stat
 
         match cmd.spawn() {
             Ok(mut child) => {
-                prev_stdout = child.stdout.take();
+                if !is_last && let Some(stdout) = child.stdout.take() {
+                    prev_stdio = Some(Stdio::from(stdout));
+                }
                 children.push(child);
             }
             Err(e) => {
