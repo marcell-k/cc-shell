@@ -1,7 +1,7 @@
 use codecrafters_shell::{
     CommandCompleterHelper, Handler, Io, Job, JobStatus, ParsedCommand, Redirect, RedirectMode,
-    build_builtins, jobs_table, next_job_id, parse_command, reap_jobs, search_path, split_pipeline,
-    tokenize,
+    add_history, build_builtins, jobs_table, next_job_id, parse_command, reap_jobs, search_path,
+    split_pipeline, tokenize,
 };
 use std::collections::HashMap;
 use std::fs::File;
@@ -241,6 +241,9 @@ fn main() -> rustyline::Result<()> {
         if input.is_empty() {
             continue;
         }
+
+        add_history(input);
+
         let tokens = tokenize(input);
         if tokens.is_empty() {
             continue;

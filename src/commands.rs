@@ -5,6 +5,7 @@ use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
+use crate::history;
 use crate::{RedirectMode, Token, completions, jobs_cmd};
 
 pub type Handler = fn(&ParsedCommand, &mut Io);
@@ -112,7 +113,9 @@ pub fn complete_cmd(command: &ParsedCommand, io: &mut Io) {
     }
 }
 
-pub fn history_cmd(_command: &ParsedCommand, _io: &mut Io) {}
+pub fn history_cmd(_command: &ParsedCommand, io: &mut Io) {
+    history::print_history(io.out);
+}
 
 pub fn exit_cmd(_command: &ParsedCommand, _io: &mut Io) {
     std::process::exit(0)
