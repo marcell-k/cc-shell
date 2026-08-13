@@ -242,6 +242,7 @@ fn main() -> rustyline::Result<()> {
             continue;
         }
 
+        rl.add_history_entry(input).ok();
         add_history(input);
 
         let tokens = tokenize(input);
