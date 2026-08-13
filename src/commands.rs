@@ -112,6 +112,8 @@ pub fn complete_cmd(command: &ParsedCommand, io: &mut Io) {
     }
 }
 
+pub fn history_cmd(_command: &ParsedCommand, _io: &mut Io) {}
+
 pub fn exit_cmd(_command: &ParsedCommand, _io: &mut Io) {
     std::process::exit(0)
 }
@@ -176,6 +178,7 @@ pub fn build_builtins() -> HashMap<&'static str, Handler> {
     m.insert("type", type_cmd);
     m.insert("complete", complete_cmd);
     m.insert("jobs", jobs_cmd);
+    m.insert("history", history_cmd);
     m
 }
 
