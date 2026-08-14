@@ -114,8 +114,35 @@ pub fn complete_cmd(command: &ParsedCommand, io: &mut Io) {
 }
 
 pub fn history_cmd(command: &ParsedCommand, io: &mut Io) {
-    let limit = command.args.first().and_then(|s| s.parse::<usize>().ok());
-    history::print_history(io.out, limit);
+    match command.args.first().map(String::as_str) {
+        Some("-a") => {
+            if let Some(path) = command.args.get(1)
+                && let Err(e) = crate::history::append_history_to_file(path)
+            {
+                writeln!(io.err, "history: {}: {}", path, e).ok();
+            }
+        }
+        Some("-r") => {
+            if let Some(path) = command.args.get(1)
+                && let Err(e) = history::load_history_from_file(path)
+            {
+                writeln!(io.err, "history: {} {}", path, e).ok();
+            }
+        }
+        Some("-w") => {
+            if let Some(path) = command.args.get(1)
+                && let Err(e) = crate::history::print_history_to_file(path)
+            {
+                writeln!(io.err, "history: {}: {}", path, e).ok();
+            }
+        }
+        _first_arg => {
+            let limit = command.args.first().and_then(|s| s.parse::<usize>().ok());
+            if let Err(e) = crate::history::print_history(io.out, limit) {
+                writeln!(io.err, "history: {}", e).ok();
+            }
+        }
+    }
 }
 
 pub fn exit_cmd(_command: &ParsedCommand, _io: &mut Io) {

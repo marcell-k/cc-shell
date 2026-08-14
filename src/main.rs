@@ -10,7 +10,7 @@ use std::os::unix::process::CommandExt;
 use std::process::{Child, Command, Stdio};
 
 use rustyline::error::ReadlineError;
-use rustyline::{Config, Editor};
+use rustyline::{Config, EditMode, Editor};
 
 fn open_redirect(redirect: &Redirect) -> Option<File> {
     let mut opts = std::fs::OpenOptions::new();
@@ -227,6 +227,7 @@ fn main() -> rustyline::Result<()> {
     let helper = CommandCompleterHelper { programs };
     let config = Config::builder()
         .completion_type(rustyline::CompletionType::List)
+        .edit_mode(EditMode::Vi)
         .build();
     let mut rl = Editor::<CommandCompleterHelper, _>::with_config(config)?;
     rl.set_helper(Some(helper));
