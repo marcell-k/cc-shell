@@ -1,9 +1,10 @@
 use codecrafters_shell::{
     CommandCompleterHelper, Handler, Io, Job, JobStatus, ParsedCommand, Redirect, RedirectMode,
-    add_history, build_builtins, jobs_table, next_job_id, parse_command, reap_jobs, search_path,
-    split_pipeline, tokenize,
+    add_history, build_builtins, jobs_table, load_history_from_file, next_job_id, parse_command,
+    reap_jobs, search_path, split_pipeline, tokenize,
 };
 use std::collections::HashMap;
+use std::env;
 use std::fs::File;
 use std::io::{self, Write};
 use std::os::unix::process::CommandExt;
@@ -230,6 +231,9 @@ fn main() -> rustyline::Result<()> {
         .edit_mode(EditMode::Vi)
         .build();
     let mut rl = Editor::<CommandCompleterHelper, _>::with_config(config)?;
+    if let Ok(histfile) = env::var("HISTFILE") {
+        let _ = load_history_from_file(&histfile);
+    }
     rl.set_helper(Some(helper));
     loop {
         reap_jobs(&mut io::stdout());
