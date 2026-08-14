@@ -1,7 +1,8 @@
 use codecrafters_shell::{
     CommandCompleterHelper, Handler, Io, Job, JobStatus, ParsedCommand, Redirect, RedirectMode,
-    add_history, build_builtins, jobs_table, load_history_from_file, next_job_id, parse_command,
-    reap_jobs, search_path, split_pipeline, tokenize,
+    add_history, append_history_to_file, build_builtins, jobs_table, load_history_from_file,
+    next_job_id, parse_command, print_history_to_file, reap_jobs, search_path, split_pipeline,
+    tokenize,
 };
 use std::collections::HashMap;
 use std::env;
@@ -239,7 +240,12 @@ fn main() -> rustyline::Result<()> {
         reap_jobs(&mut io::stdout());
         let input = match rl.readline("$ ") {
             Ok(line) => line,
-            Err(ReadlineError::Eof) | Err(ReadlineError::Interrupted) => break,
+            Err(ReadlineError::Eof) | Err(ReadlineError::Interrupted) => {
+                if let Ok(histfile) = env::var("HISTFILE") {
+                    let _ = append_history_to_file(&histfile);
+                }
+                break;
+            }
             Err(e) => return Err(e),
         };
         let input = input.trim();

@@ -5,6 +5,7 @@ use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
+use crate::append_history_to_file;
 use crate::history;
 use crate::{RedirectMode, Token, completions, jobs_cmd};
 
@@ -146,6 +147,9 @@ pub fn history_cmd(command: &ParsedCommand, io: &mut Io) {
 }
 
 pub fn exit_cmd(_command: &ParsedCommand, _io: &mut Io) {
+    if let Ok(histfile) = env::var("HISTFILE") {
+        let _ = append_history_to_file(&histfile);
+    }
     std::process::exit(0)
 }
 

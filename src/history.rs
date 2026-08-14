@@ -38,6 +38,7 @@ impl History {
                 self.add(line);
             }
         }
+        self.append_cursor = self.entries.len();
         Ok(())
     }
 
