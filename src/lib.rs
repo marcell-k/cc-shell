@@ -18,3 +18,6 @@ pub use history::{
     add_history, append_history_to_file, load_history_from_file, print_history,
     print_history_to_file,
 };
+
+mod declare;
+pub use declare::{get_var, is_valid_identifier, set_var, variables};

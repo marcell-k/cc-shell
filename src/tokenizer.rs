@@ -1,3 +1,4 @@
+use crate::get_var;
 use std::mem;
 
 #[derive(Debug, PartialEq)]
@@ -71,6 +72,43 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     }
                 }
                 in_token = true;
+            }
+
+            '$' if quote != QuoteState::Single => {
+                let mut name = String::new();
+                if chars.peek() == Some(&'{') {
+                    chars.next();
+                    while let Some(&c) = chars.peek() {
+                        if c == '}' {
+                            chars.next();
+                            break;
+                        }
+                        name.push(c);
+                        chars.next();
+                    }
+                } else if let Some(&c) = chars.peek()
+                    && (c.is_ascii_alphabetic() || c == '_')
+                {
+                    name.push(c);
+                    chars.next();
+                    while let Some(&c) = chars.peek() {
+                        if c.is_ascii_alphanumeric() || c == '_' {
+                            name.push(c);
+                            chars.next();
+                        } else {
+                            break;
+                        }
+                    }
+                }
+                if name.is_empty() {
+                    buf.push('$');
+                    in_token = true;
+                } else if let Some(val) = get_var(&name)
+                    && !val.is_empty()
+                {
+                    buf.push_str(&val);
+                    in_token = true;
+                }
             }
 
             '\'' if quote != QuoteState::Double => {

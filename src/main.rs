@@ -1,8 +1,7 @@
 use codecrafters_shell::{
     CommandCompleterHelper, Handler, Io, Job, JobStatus, ParsedCommand, Redirect, RedirectMode,
     add_history, append_history_to_file, build_builtins, jobs_table, load_history_from_file,
-    next_job_id, parse_command, print_history_to_file, reap_jobs, search_path, split_pipeline,
-    tokenize,
+    next_job_id, parse_command, reap_jobs, search_path, split_pipeline, tokenize,
 };
 use std::collections::HashMap;
 use std::env;

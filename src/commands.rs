@@ -6,7 +6,10 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
 use crate::append_history_to_file;
+use crate::get_var;
 use crate::history;
+use crate::is_valid_identifier;
+use crate::set_var;
 use crate::{RedirectMode, Token, completions, jobs_cmd};
 
 pub type Handler = fn(&ParsedCommand, &mut Io);
@@ -146,6 +149,34 @@ pub fn history_cmd(command: &ParsedCommand, io: &mut Io) {
     }
 }
 
+pub fn declare_cmd(command: &ParsedCommand, io: &mut Io) {
+    match command.args.first().map(String::as_str) {
+        Some("-p") => {
+            if let Some(var_name) = command.args.get(1) {
+                match get_var(var_name) {
+                    Some(val) => {
+                        writeln!(io.out, "declare -- {}=\"{}\"", var_name, val).ok();
+                    }
+                    None => {
+                        writeln!(io.err, "declare: {}: not found", var_name).ok();
+                    }
+                }
+            }
+        }
+
+        _ => {
+            for arg in &command.args {
+                if let Some((key, val)) = arg.split_once('=') {
+                    if is_valid_identifier(key) {
+                        set_var(key, val);
+                    } else {
+                        writeln!(io.err, "declare: `{}': not a valid identifier", arg).ok();
+                    }
+                }
+            }
+        }
+    }
+}
 pub fn exit_cmd(_command: &ParsedCommand, _io: &mut Io) {
     if let Ok(histfile) = env::var("HISTFILE") {
         let _ = append_history_to_file(&histfile);
@@ -214,6 +245,7 @@ pub fn build_builtins() -> HashMap<&'static str, Handler> {
     m.insert("complete", complete_cmd);
     m.insert("jobs", jobs_cmd);
     m.insert("history", history_cmd);
+    m.insert("declare", declare_cmd);
     m
 }
 
